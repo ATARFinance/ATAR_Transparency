@@ -1574,7 +1574,7 @@ contract MasterChef is Ownable {
         dronePerBlock = _dronePerBlock;
         startBlock = _startBlock;
 
-        // staking pool default with harvestInterval 0
+        // staking pool default with harvestInterval 21600
         poolInfo.push(PoolInfo({
         lpToken: _drone,
         allocPoint: 1000,
@@ -1707,8 +1707,8 @@ contract MasterChef is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 droneReward = multiplier.mul(dronePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
 
-        require(drone.isExceedMaxSupply(droneReward.div(10)) == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); //Try smaller first
-        require(drone.isExceedMaxSupply(droneReward)  == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); // Try Bigger later
+        require(drone.isExceedMaxSupply(droneReward.div(10)) == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); //Try check smaller first
+        require(drone.isExceedMaxSupply(droneReward)  == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); // Try check Bigger later
 
         drone.mint(devaddr, droneReward.div(10)); //0.1% , 0.1% to Dev
         drone.mint(rewardPoolAddress, droneReward.div(40)); //0.4% , 0.4% to FeeAddress future is Contract for Event and another product or burn baby burn~
@@ -1815,7 +1815,7 @@ contract MasterChef is Ownable {
                 uint256 _devpercent = (pool.depositFee.mul(3400)).div(10000); // 34% of 100% from DepositFee like n% from 3% in example
                 uint256 _devamount = _amount.mul(_devpercent).div(10000); // Get Deposit Fee from original _amount.
                 uint256 _feepercent = (pool.depositFee).sub(_devpercent); // Get Fee Percent from All Fee percent - Dev Percent
-                uint256 _feeamount = _amount.mul(_feepercent).div(10000); // Fee amount = all amount x Fee Percent
+                uint256 _feeamount = _amount.mul(_feepercent).div(10000); // Fee amount = all amount x Fee Percent calculated above
                 pool.lpToken.safeTransfer(devaddr, _devamount); // Transfer to dev
                 pool.lpToken.safeTransfer(feeAddress, _feeamount); // Transfer to feeAddress
                 user.amount = user.amount.add(_amount).sub(_devamount.add(_feeamount)); //Give user from where deposit fee deducted.
@@ -1865,19 +1865,19 @@ contract MasterChef is Ownable {
 
     // Update dev address by the previous dev.
     function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut? it's like Colonel for Colonel was check ? :)");
+        require(msg.sender == devaddr, "dev: I'm asking you are you Dev ? huh ?");
         require(_devaddr != address(0), "Why Zero Addr Dev ?");
         devaddr = _devaddr;
     }
 
     function setfeeAddress(address _feeAddress) public{
-        require(msg.sender == devaddr, "Dev ? : I'm asking you are you dev ? huh ?");
+        require(msg.sender == devaddr, "Dev ? : I'm asking you are you Dev ? huh ?");
         feeAddress = _feeAddress;
     }
 
     function setRewardContractAddress(address _newRewardContractAddress) public{
-        require(msg.sender == devaddr, "Dev ? : I'm asking you are you dev ? huh ?");
-        rewardPoolAddress = _newRewardContractAddress;
+        require(msg.sender == devaddr, "Dev ? : I'm asking you are you Dev ? huh ?");
+        rewardPoolAddress = _newRewardContractAddress; // This is function set for send a FEE to a reward contract in the future.
     }
     function updateEmissionRate(uint256 _dronePerBlock) public onlyOwner
     {
