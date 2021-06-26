@@ -1581,8 +1581,8 @@ contract MasterChef is Ownable {
         lastRewardBlock: startBlock,
         accDronePerShare: 0,
         depositFee: 0,
-        harvestInterval: 0,
-        harvestFee: 0
+        harvestInterval: 21600,
+        harvestFee: 800
         }));
 
         totalAllocPoint = 1000;
@@ -1602,7 +1602,7 @@ contract MasterChef is Ownable {
     function add(uint256 _allocPoint, IBEP20 _lpToken,uint256 _depositFee,uint256 _harvestFee,uint256 _harvestInterval, bool _withUpdate) public onlyOwner {
         require(_depositFee <= 300, "add: Invalid deposit fee must less than 300 (3%)"); //Must maximum at 3%
         require(_harvestFee <= 800, "add: Invalid deposit fee must less than 500 (8%)"); //Must maximum at 8%
-        require(_harvestInterval <= MAXIMUM_HARVEST_INTERVAL, "add: invalid harvest interval ! (exceed amount)");
+        require(_harvestInterval <= MAXIMUM_HARVEST_INTERVAL, "add: invalid harvest interval ! (exceed range)");
         uint256 length = poolInfo.length;
         if (_withUpdate) {
             massUpdatePools();
@@ -1623,9 +1623,9 @@ contract MasterChef is Ownable {
 
     // Update the given pool's DRONE allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint,uint256 _depositFee,uint256 _harvestFee,uint256 _harvestInterval, bool _withUpdate) public onlyOwner {
-        require(_depositFee <= 300, "add: Invalid deposit fee must less than 300 (3%)"); //Must maximum at 3%
-        require(_harvestFee <= 800, "add: Invalid deposit fee must less than 800 (8%)"); //Must maximum at 8%
-        require(_harvestInterval <= MAXIMUM_HARVEST_INTERVAL, "add: invalid harvest interval ! (exceed amount)");
+        require(_depositFee <= 300, "set: Invalid deposit fee must less than 300 (3%)"); //Must maximum at 3%
+        require(_harvestFee <= 800, "set: Invalid deposit fee must less than 800 (8%)"); //Must maximum at 8%
+        require(_harvestInterval <= MAXIMUM_HARVEST_INTERVAL, "set: invalid harvest interval ! (exceed range)");
 
         if (_withUpdate) {
             massUpdatePools();
