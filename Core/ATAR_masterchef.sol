@@ -1228,7 +1228,7 @@ contract DilithiumCore is BEP20('DilithiumCore Token', 'DILITHIUM') {
 
     function burn(address _from ,uint256 _amount) public onlyOwner {
         _burn(_from, _amount);
-        _moveDelegates(address(0), _delegates[_from], _amount);
+        _moveDelegates( _delegates[_from],address(0), _amount);
     }
 
     // The DRONE TOKEN!
@@ -1603,7 +1603,6 @@ contract MasterChef is Ownable {
         require(_depositFee <= 300, "add: Invalid deposit fee must less than 300 (3%)"); //Must maximum at 3%
         require(_harvestFee <= 800, "add: Invalid deposit fee must less than 500 (8%)"); //Must maximum at 8%
         require(_harvestInterval <= MAXIMUM_HARVEST_INTERVAL, "add: invalid harvest interval ! (exceed range)");
-        uint256 length = poolInfo.length;
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -1684,7 +1683,7 @@ contract MasterChef is Ownable {
     // View function to see pending DRONEs on frontend.
 
 
-    // Update reward variables for all pools. Be careful of gas spending!
+    // Update reward variables for all pools. Be careful of gas spending! each pool might required at least 80,000 wei for safety (calculate estimated) begin with at least
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for (uint256 pid = 0; pid < length; ++pid) {
@@ -1706,13 +1705,14 @@ contract MasterChef is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 droneReward = multiplier.mul(dronePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-
-        require(drone.isExceedMaxSupply(droneReward.div(10)) == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); //Try check smaller first
-        require(drone.isExceedMaxSupply(droneReward)  == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); // Try check Bigger later
-
-        drone.mint(devaddr, droneReward.div(10)); //0.1% , 0.1% to Dev
-        drone.mint(rewardPoolAddress, droneReward.div(40)); //0.4% , 0.4% to FeeAddress future is Contract for Event and another product or burn baby burn~
-        drone.mint(address(dilithium), droneReward);
+        require(drone.isExceedMaxSupply(droneReward)  == false,'Cannot Mint droneReward anymore drone : its exceed MaximumSupply!'); // Try check all drone reward
+        uint256 dev01Percent =  (droneReward.mul(10)).div(10000);
+        uint256 rewardPool04Percent =  (droneReward.mul(40)).div(10000);
+        uint256 userDroneReward = droneReward.sub(dev01Percent.add(rewardPool04Percent));
+        drone.mint(devaddr, dev01Percent); //0.1% , 0.1% to Dev // Fixing TechRate advise we deducted from all reward instead
+        drone.mint(rewardPoolAddress,rewardPool04Percent); //0.4% , 0.4% to FeeAddress future is Contract for Event and another product or burn baby burn~ // Fixing TechRate advise we deducted from all reward instead
+        drone.mint(address(dilithium), userDroneReward); // The reward deducted all value must not greater than  multiplier.mul(dronePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        require(dev01Percent.add(rewardPool04Percent).add(userDroneReward) == droneReward,"Mint not good");
         pool.accDronePerShare = pool.accDronePerShare.add(droneReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
@@ -1727,7 +1727,14 @@ contract MasterChef is Ownable {
 
         payOrLockupPendingDrone(_pid);
         if (_amount > 0) {
+
+            // Thanks for RugDoc advise
+            uint256 before = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            uint256 _after = pool.lpToken.balanceOf(address(this));
+            _amount = _after.sub(before); // Real amount of LP transfer to this address
+            // Thanks for RugDoc advise
+
             if(pool.depositFee >0)
             {
                 uint256 _devpercent = (pool.depositFee.mul(3400)).div(10000); // 34% of 100% from DepositFee like n% from 3% in example
@@ -1805,11 +1812,16 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[0][msg.sender];
         updatePool(0);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accDronePerShare).div(1e12).sub(user.rewardDebt);
             payOrLockupPendingDrone(0);
         }
         if(_amount > 0) {
+            // Thanks for RugDoc advise
+            uint256 before = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            uint256 _after = pool.lpToken.balanceOf(address(this));
+            _amount = _after.sub(before); // Real amount of LP transfer to this address
+            // Thanks for RugDoc advise
+
             if(pool.depositFee >0)
             {
                 uint256 _devpercent = (pool.depositFee.mul(3400)).div(10000); // 34% of 100% from DepositFee like n% from 3% in example
@@ -1844,6 +1856,7 @@ contract MasterChef is Ownable {
         }
         user.rewardDebt = user.amount.mul(pool.accDronePerShare).div(1e12);
 
+
         dilithium.burn(msg.sender, _amount);
         emit Withdraw(msg.sender, 0, _amount);
     }
@@ -1853,6 +1866,11 @@ contract MasterChef is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
+        if(_pid == 0)
+        {
+            dilithium.burn(msg.sender, user.amount);
+        }
+
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;

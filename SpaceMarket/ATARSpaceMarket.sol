@@ -22,7 +22,7 @@ contract ATARSpaceMarket is SpaceMarket ,CappedSpaceMarket , TimedSpaceMarket ,P
         IBEP20 token
     )
     public
-    SpaceMarket(wallet, token)
+    SpaceMarket(wallet, token, cap,closingTime)
     CappedSpaceMarket(cap)
     TimedSpaceMarket(openingTime, closingTime)
     {

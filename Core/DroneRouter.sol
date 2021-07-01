@@ -337,7 +337,7 @@ library DroneLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'76fcf6ad9b9c153b8c5485f9cf893469f18645a607857e8868b324eabf1ac48e' // init code hash
+                hex'e346fa3e364e4a4853c07230b613717904ae2ba7da8b3b6e5c240caf8ab31b59' // init code hash
             ))));
     }
 
@@ -447,7 +447,7 @@ contract DroneRouter is IDroneRouter02 {
 
     address public immutable override factory;
     address public immutable override WETH;
-    address public immutable tokenAddr = address(0xeA28c1F25EBa47223D180f4197d1fE94E5d2A846);
+
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'DroneRouter: EXPIRED');
         _;
@@ -670,13 +670,8 @@ contract DroneRouter is IDroneRouter02 {
         address to,
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-        if (block.number <= 9094710)
-        {
-            require(path[0] != tokenAddr, "DroneRouter: You cannot sold any ATAR before a public sale launch time");
-        }
         amounts = DroneLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'DroneRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, DroneLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
@@ -690,11 +685,6 @@ contract DroneRouter is IDroneRouter02 {
         address to,
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-        if (block.number <= 9094710)
-        {
-            require(path[0] != tokenAddr, "DroneRouter: You cannot sold any ATAR before a public sale launch time");
-        }
-
         amounts = DroneLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, 'DroneRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
@@ -745,10 +735,6 @@ contract DroneRouter is IDroneRouter02 {
     returns (uint[] memory amounts)
     {
         require(path[path.length - 1] == WETH, 'DroneRouter: INVALID_PATH');
-        if (block.number <= 9094710)
-        {
-            require(path[0] != tokenAddr, "DroneRouter: You cannot sold any ATAR before a public sale launch time");
-        }
         amounts = DroneLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'DroneRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
@@ -805,10 +791,6 @@ contract DroneRouter is IDroneRouter02 {
         address to,
         uint deadline
     ) external virtual override ensure(deadline) {
-        if (block.number <= 9094710)
-        {
-            require(path[0] != tokenAddr, "DroneRouter: You cannot sold any ATAR before a public sale launch time");
-        }
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, DroneLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
@@ -856,10 +838,6 @@ contract DroneRouter is IDroneRouter02 {
     override
     ensure(deadline)
     {
-        if (block.number <= 9094710)
-        {
-            require(path[0] != tokenAddr, "DroneRouter: You cannot sold any ATAR before a public sale launch time");
-        }
         require(path[path.length - 1] == WETH, 'DroneRouter: INVALID_PATH');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, DroneLibrary.pairFor(factory, path[0], path[1]), amountIn

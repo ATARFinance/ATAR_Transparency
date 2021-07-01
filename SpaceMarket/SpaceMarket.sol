@@ -31,24 +31,23 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
 
     uint256 public ten_e18 = 1000000000000000000;
     uint256 public maxToken = 100000;
-    // Maximum cap per contribution (wei)
+    // Maximum cap per contribution (token)
     uint256 private _cap;
-    // Storage real left cap from presale (wei)
+    // Storage real left cap from presale (token)
     uint256 private _leftcap;
-    // Burned cap from presale (wei)
+    // Burned cap from presale (token)
     uint256 private _burncap;
-    // Transfered cap from presale (wei)
+    // Transfered cap from presale (token)
     uint256 private _tokenRaised;
     // The token being sold
     IBEP20 private _token;
 
+    uint256 private _closeTime;
     // Address where funds are collected
     address payable private _wallet;
 
     // How many token units a buyer gets per wei.
-    // The rate is the conversion between wei and the smallest and indivisible token unit.
-    // So, if you are using a rate of 1 with a ERC20Detailed token with 3 decimals called TOK
-    // 1 wei will give you 1 unit, or 0.001 TOK.
+    // The rate is the conversion between wei and dollar price in blockchain.
     uint256 private _rate;
 
     // Amount of wei raised
@@ -65,25 +64,26 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
     event TokensHoldToBurn(address indexed purchaser, address indexed beneficiary, uint256 value);
 
     /**
-     * @dev The rate is the conversion between wei and the smallest and indivisible in wei unit
-     * token unit. So, if you are using a rate of 1 with a ERC20Detailed token
-     * with 3 decimals called TOK, 1 wei will give you 1 unit, or 0.001 TOK.
+     * @dev The rate is the conversion between wei pricefeed
+     * get data from aggregatorV3Interface we can list price from blockchain
      * @param wallet Address where collected funds will be forwarded to
      * @param token Address of the token being sold
+     * @param __cap is a cap setup max cap
      */
-    constructor (address payable wallet, IBEP20 token) public {
+    constructor (address payable wallet, IBEP20 token, uint256 __cap, uint256 __closeTime) public {
         priceFeed = AggregatorV3Interface(0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE);
         _rate = uint256(getThePrice()).mul(10);
         // Declare here 1 ATAR always = 0.1$ Surprise right :) told u we fair
         require(_rate > 0, "SpaceMarket: rate is 0, Check proxy contract");
-        //How happen ? this is chainlink proxy ... it's never die on smart contract that's all
+        //How happen ? this is chainlink proxy smart contract ... it's never die on smart contract that's all
         require(wallet != address(0), "SpaceMarket: wallet is the zero address");
         require(address(token) != address(0), "SpaceMarket: token is the zero address");
-        //Testnet Chainlink Proxy for pricing
-        //        priceFeed = AggregatorV3Interface(0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE); //Mainnet Chainlink Proxy for pricing
+
         _wallet = wallet;
         _token = token;
+        _cap = __cap;
         _leftcap = _cap;
+        _closeTime = __closeTime;
     }
 
     function getmaxToken() public view returns (uint256)
@@ -97,14 +97,16 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
 
     function setCap(uint256 newCap) internal
     {
-        require(newCap >=0 ,'New cap must equal or greater than 0');
+        require(newCap >= 0, 'New cap must equal or greater than 0');
         _cap = newCap;
     }
+
     function setBurnCap(uint256 newCap) internal
     {
-        require(newCap >=0 ,'New burncap must equal or greater than 0');
+        require(newCap >= 0, 'New burncap must equal or greater than 0');
         _burncap = newCap;
     }
+
     function getLeftCap() public view returns (uint256) {
         return _leftcap;
     }
@@ -122,7 +124,7 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
     * @dev get price function
     * This will update a rate in contract
     * by calculating from BNB / USD price
-    * Everyone will get in equality
+    * Everyone will get in equality for 0.1$ per ATAR depends on BNB Price (Fair)
     */
 
     function getThePrice() public view returns (int) {
@@ -187,7 +189,7 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
      */
     function buyTokens(address beneficiary) public nonReentrant payable {
         uint256 weiAmount = msg.value;
-        _rate =  uint256(getThePrice()).mul(10);
+        _rate = uint256(getThePrice()).mul(10);
 
         //Update the price first
         _preValidatePurchase(beneficiary, weiAmount);
@@ -195,8 +197,8 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
         // calculate token amount to be created
         uint256 tokens = _getTokenAmount(weiAmount);
 
-        require((tokens) <= getmaxToken() , "Exceed amount of buyer max at specific amount of tokens");
-//        require(tokens.div(10) > 4000 , "Exceed amount of buyer max at specific 4000 dollars");
+        require((tokens) <= getmaxToken(), "Exceed amount of buyer max at specific amount of tokens");
+        //        require(tokens.div(10) > 4000 , "Exceed amount of buyer max at specific 4000 dollars");
         // update state
         _weiRaised = _weiRaised.add(weiAmount);
         _tokenRaised = _tokenRaised.add(tokens);
@@ -211,12 +213,10 @@ contract SpaceMarket is Context, ReentrancyGuard, Ownable {
         _postValidatePurchase(beneficiary, tokens);
     }
 
-    function flushToBurnTokens() public nonReentrant onlyOwner payable{
+    function flushToBurnTokens() public nonReentrant onlyOwner payable {
+        require(block.timestamp > _closeTime,'Cannot Flush, SpaceMarket sale not end yet');
         _leftcap = getCap().sub(_tokenRaised);
         //See how much we got cap left
-
-        // calculate token amount to be created
-
 
         //Send to wallet waiting for burn all left
         _processPurchase(BURN_ADDRESS, _leftcap);

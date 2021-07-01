@@ -771,7 +771,7 @@ contract BEP20 is Context, IBEP20, Ownable {
         {
             return (_totalSupply.add(amount)) > _maxSupply; // maxSupply greater than 0 so check first if totalSupply add new amount and its still not exceed of maxSupply
         }
-        return false; // In case that maxSupply = 0 so never exceed
+        return false; // In case that maxSupply = 0 so never exceed // we wrote this in-case we need economic test in testnet
     }
 
 
